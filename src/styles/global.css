@@ -137,6 +137,9 @@ main,
   height: 4.6rem;
   flex: none;
   display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  background: transparent;
 }
 
 .nav-desktop {
