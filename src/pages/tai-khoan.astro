@@ -1,0 +1,298 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { sameOrigin } from '../lib/auth';
+import { deleteClubPost, deletePostByUser, getPost, getPostByUser, listPostsByUser, saveBusinessPost, saveClubPost } from '../lib/db';
+import { postImage, readUpload } from '../lib/images';
+import { formatDate } from '../lib/posts';
+import { site } from '../data/site';
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/dang-nhap/');
+
+const env = Astro.locals.runtime?.env;
+const club = user.role === 'club';
+let error = '';
+let saved = Astro.url.searchParams.get('luu') === '1';
+let title = '';
+let description = '';
+let body = '';
+let requestedId = club ? (Astro.url.searchParams.get('sua') ?? '') : '';
+
+if (!env?.DB || !env.IMAGES) {
+  error = 'Chưa kết nối được cơ sở dữ liệu hoặc kho ảnh.';
+} else if (Astro.request.method === 'POST') {
+  if (!sameOrigin(Astro.request)) {
+    error = 'Yêu cầu không hợp lệ.';
+  } else {
+    const form = await Astro.request.formData();
+    const intent = String(form.get('intent') ?? 'save');
+    const postId = String(form.get('post_id') ?? '').trim();
+    if (postId) requestedId = postId;
+
+    if (intent === 'delete') {
+      const imageKey = club ? await deleteClubPost(env.DB, user.id, postId) : await deletePostByUser(env.DB, user.id);
+      if (imageKey) await env.IMAGES.delete(imageKey);
+      return Astro.redirect('/tai-khoan/');
+    }
+
+    title = String(form.get('title') ?? '').trim().replace(/\s+/g, ' ');
+    description = String(form.get('description') ?? '').trim().replace(/\s+/g, ' ');
+    body = String(form.get('body') ?? '').trim();
+    const uploaded = await readUpload(form.get('image'));
+    const existing = club ? (postId ? await getPost(env.DB, postId) : null) : await getPostByUser(env.DB, user.id);
+
+    if (club && existing && (existing.userId !== user.id || existing.role !== 'club')) error = 'Không sửa được bài này.';
+    else if (uploaded && 'error' in uploaded) error = uploaded.error;
+    else if (title.length < 8 || title.length > 140) error = 'Tiêu đề cần từ 8 đến 140 ký tự.';
+    else if (description.length < 20 || description.length > 280) error = 'Mô tả ngắn cần từ 20 đến 280 ký tự.';
+    else if (body.length < 40 || body.length > 8000) error = 'Nội dung cần từ 40 đến 8000 ký tự.';
+    else if (!uploaded && !existing?.imageKey) error = 'Hãy tải một ảnh minh họa cho bài.';
+    else {
+      const id = club ? existing?.id ?? crypto.randomUUID() : user.id;
+      let imageKey: string | null = null;
+      if (uploaded && !('error' in uploaded)) {
+        imageKey = id;
+        await env.IMAGES.put(id, uploaded.bytes, { httpMetadata: { contentType: uploaded.type } });
+      }
+      const post = club
+        ? await saveClubPost(env.DB, user.id, { id, title, description, body, imageKey })
+        : await saveBusinessPost(env.DB, user.id, { title, description, body, imageKey });
+      return Astro.redirect(`/tai-khoan/?luu=1#bai-${post.id}`);
+    }
+  }
+}
+
+const mine = env?.DB ? await listPostsByUser(env.DB, user.id) : [];
+const current = club ? (requestedId ? mine.find((post) => post.id === requestedId) ?? null : null) : (mine[0] ?? null);
+if (!title && current && !error) {
+  title = current.title;
+  description = current.description;
+  body = current.body;
+}
+const currentImage = current ? postImage(current.imageKey, current.updatedAt) : null;
+const pageTitle = club ? 'Bài của câu lạc bộ' : 'Bài của doanh nghiệp';
+---
+
+<Layout title={pageTitle} description={club ? 'Viết các bài của câu lạc bộ trên DEIC.' : 'Viết hoặc sửa bài duy nhất của doanh nghiệp trên DEIC.'}>
+  <div class="wrap editor">
+    <header class="editor-head">
+      <div>
+        <p class="kicker">{user.businessName}</p>
+        <h1>{club ? (current ? 'Sửa bài câu lạc bộ' : 'Viết bài câu lạc bộ') : current ? 'Sửa bài của doanh nghiệp' : 'Viết bài của doanh nghiệp'}</h1>
+      </div>
+      <p>
+        {
+          club
+            ? 'Soạn bài ngay trên trang này. Phần xem trước bên dưới là dạng bài sẽ hiện cho mọi người.'
+            : 'Mỗi doanh nghiệp giữ một bài. Lưu lần nữa là sửa bài đó.'
+        }
+      </p>
+    </header>
+
+    {
+      club && mine.length > 0 && (
+        <section class="editor-library">
+          <div class="section-head">
+            <h2>Bài đã đăng</h2>
+            {current && <a href="/tai-khoan/">Viết bài mới</a>}
+          </div>
+          <ul class="editor-cards">
+            {mine.map((post) => (
+              <li id={`bai-${post.id}`}>
+                <a href={`/tai-khoan/?sua=${post.id}`}>
+                  <strong>{post.title}</strong>
+                  <span class="meta">{formatDate(new Date(post.updatedAt))}</span>
+                </a>
+                <span class="account-actions">
+                  <a href={`/bai-viet/clb/${post.id}/`}>Xem</a>
+                  <form method="post" action="/tai-khoan/">
+                    <input type="hidden" name="post_id" value={post.id} />
+                    <button type="submit" name="intent" value="delete">
+                      Gỡ
+                    </button>
+                  </form>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <form id="soan-bai" class="composer" method="post" action="/tai-khoan/" enctype="multipart/form-data">
+      {error && <p class="alert composer-alert">{error}</p>}
+      {saved && !error && <p class="note composer-alert">Đã lưu bài. Xem trước bên dưới là bản vừa lưu.</p>}
+      {club && current && <input type="hidden" name="post_id" value={current.id} />}
+      <div class="composer-main">
+        <label class="composer-field">
+          <span>Tiêu đề</span>
+          <input class="composer-title" name="title" required minlength="8" maxlength="140" value={title} placeholder="Việc chính của bài, nói trong một dòng" />
+        </label>
+        <label class="composer-field">
+          <span>Mô tả ngắn</span>
+          <textarea class="composer-deck" name="description" required minlength="20" maxlength="280" rows="3" placeholder="Một hoặc hai câu tóm tắt, hiện ngay dưới tiêu đề">{description}</textarea>
+        </label>
+        <div class="composer-tools" role="toolbar" aria-label="Định dạng bài">
+          <button type="button" data-mark="heading">Đề mục</button>
+          <button type="button" data-mark="bold">Đậm</button>
+          <button type="button" data-mark="italic">Nghiêng</button>
+          <button type="button" data-mark="list">Danh sách</button>
+          <button type="button" data-mark="quote">Trích dẫn</button>
+          <button type="button" data-mark="link">Liên kết</button>
+        </div>
+        <label class="composer-field">
+          <span>Nội dung</span>
+          <textarea class="composer-body" name="body" required minlength="40" maxlength="8000" rows="18" placeholder="Xuống dòng hai lần để tách đoạn. Chọn chữ rồi bấm Đậm, Đề mục hoặc Danh sách.">{body}</textarea>
+        </label>
+      </div>
+      <aside class="composer-side">
+        <label class="cover-pick">
+          <span class="cover-label">Ảnh bìa</span>
+          <img id="cover-preview" alt="" src={currentImage ?? undefined} hidden={!currentImage} />
+          <span class="cover-empty">Chọn ảnh JPEG, PNG hoặc WebP, tối đa 2,5 MB.</span>
+          <input name="image" type="file" accept="image/jpeg,image/png,image/webp" />
+        </label>
+        <p class="cover-note">{currentImage ? 'Ảnh đang dùng. Chọn tệp khác nếu muốn thay.' : 'Bài cần một ảnh bìa trước khi đăng.'}</p>
+        <ul class="composer-counts" aria-live="polite">
+          <li data-count="title">Tiêu đề</li>
+          <li data-count="description">Mô tả</li>
+          <li data-count="body">Nội dung</li>
+        </ul>
+        <button class="btn" type="submit" name="intent" value="save">{club && !current ? 'Đăng bài' : 'Lưu bài'}</button>
+        {
+          current && (
+            <a class="btn btn-line" href={club ? `/bai-viet/clb/${current.id}/` : `/doanh-nghiep/${current.id}/`}>
+              Xem bản đã đăng
+            </a>
+          )
+        }
+        {!club && current && <button class="btn btn-line" type="submit" form="go-bai">Gỡ bài</button>}
+        <p class="composer-guide">
+          Ảnh lấy từ nơi khác thì ghi nguồn trong bài. Liên kết chỉ nhận địa chỉ bắt đầu bằng https.
+        </p>
+      </aside>
+    </form>
+    {
+      !club && current && (
+        <form id="go-bai" method="post" action="/tai-khoan/" hidden>
+          <input type="hidden" name="intent" value="delete" />
+        </form>
+      )
+    }
+
+    <section class="preview-panel" aria-label="Xem trước bài">
+      <p class="kicker">Xem trước</p>
+      <article>
+        <header>
+          <p class="kicker">{club ? site.clubName : user.businessName}</p>
+          <h2 id="preview-title">{title || 'Tiêu đề bài'}</h2>
+          <p class="deck" id="preview-deck">{description || 'Mô tả ngắn hiện ở đây.'}</p>
+        </header>
+        <img id="preview-image" alt="" src={currentImage ?? undefined} hidden={!currentImage} />
+        <div class="prose" id="preview-body"></div>
+      </article>
+    </section>
+  </div>
+</Layout>
+
+<script>
+  import { paragraphs } from '../lib/text';
+
+  const form = document.getElementById('soan-bai');
+  const title = form?.querySelector<HTMLInputElement>('[name="title"]');
+  const description = form?.querySelector<HTMLTextAreaElement>('[name="description"]');
+  const body = form?.querySelector<HTMLTextAreaElement>('[name="body"]');
+  const file = form?.querySelector<HTMLInputElement>('[name="image"]');
+  const previewTitle = document.getElementById('preview-title');
+  const previewDeck = document.getElementById('preview-deck');
+  const previewBody = document.getElementById('preview-body');
+  const previewImage = document.getElementById('preview-image');
+  const cover = document.getElementById('cover-preview');
+
+  const limits: Record<string, [number, number]> = {
+    title: [8, 140],
+    description: [20, 280],
+    body: [40, 8000],
+  };
+
+  function paint() {
+    if (!title || !description || !body || !previewTitle || !previewDeck || !previewBody) return;
+    previewTitle.textContent = title.value.trim() || 'Tiêu đề bài';
+    previewDeck.textContent = description.value.trim() || 'Mô tả ngắn hiện ở đây.';
+    previewBody.innerHTML = body.value.trim()
+      ? paragraphs(body.value)
+      : '<p class="meta">Nội dung xem trước hiện khi bạn viết.</p>';
+    for (const [name, [min, max]] of Object.entries(limits)) {
+      const field = form?.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${name}"]`);
+      const row = form?.querySelector<HTMLElement>(`[data-count="${name}"]`);
+      if (!field || !row) continue;
+      const length = field.value.trim().length;
+      const ready = length >= min && length <= max;
+      row.textContent = `${row.dataset.label} ${length}/${max}`;
+      row.dataset.ready = length === 0 ? '' : ready ? 'yes' : 'no';
+    }
+  }
+
+  function field(name: string) {
+    return form?.querySelector<HTMLElement>(`[data-count="${name}"]`);
+  }
+
+  field('title')?.setAttribute('data-label', 'Tiêu đề');
+  field('description')?.setAttribute('data-label', 'Mô tả');
+  field('body')?.setAttribute('data-label', 'Nội dung');
+
+  function wrap(before: string, after: string) {
+    if (!body) return;
+    const start = body.selectionStart;
+    const end = body.selectionEnd;
+    const selected = body.value.slice(start, end) || 'chữ';
+    body.setRangeText(`${before}${selected}${after}`, start, end, 'select');
+    body.focus();
+    paint();
+  }
+
+  function prefix(mark: string) {
+    if (!body) return;
+    const start = body.selectionStart;
+    const end = body.selectionEnd;
+    const lineStart = body.value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+    const nextBreak = body.value.indexOf('\n', end);
+    const lineEnd = nextBreak === -1 ? body.value.length : nextBreak;
+    const next = body.value
+      .slice(lineStart, lineEnd)
+      .split('\n')
+      .map((line) => (line.startsWith(mark) ? line : `${mark}${line}`))
+      .join('\n');
+    body.setRangeText(next, lineStart, lineEnd, 'end');
+    body.focus();
+    paint();
+  }
+
+  form?.querySelectorAll<HTMLButtonElement>('[data-mark]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const mark = button.dataset.mark;
+      if (mark === 'heading') prefix('## ');
+      else if (mark === 'bold') wrap('**', '**');
+      else if (mark === 'italic') wrap('*', '*');
+      else if (mark === 'list') prefix('- ');
+      else if (mark === 'quote') prefix('> ');
+      else if (mark === 'link') wrap('[', '](https://)');
+    });
+  });
+
+  title?.addEventListener('input', paint);
+  description?.addEventListener('input', paint);
+  body?.addEventListener('input', paint);
+  file?.addEventListener('change', () => {
+    const chosen = file.files?.[0];
+    if (!chosen || !(cover instanceof HTMLImageElement) || !(previewImage instanceof HTMLImageElement)) return;
+    const url = URL.createObjectURL(chosen);
+    cover.src = url;
+    cover.hidden = false;
+    previewImage.src = url;
+    previewImage.hidden = false;
+  });
+  paint();
+</script>

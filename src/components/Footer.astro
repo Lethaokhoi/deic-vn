@@ -1,0 +1,23 @@
+---
+import { site } from '../data/site';
+---
+
+<footer class="site-footer">
+  <div class="wrap footer-grid">
+    <div>
+      <p class="footer-title">DEIC</p>
+      <p>
+        {site.clubName}. Trang tin của câu lạc bộ và bài viết từng doanh nghiệp thành viên tự đăng.
+      </p>
+    </div>
+    <div>
+      <p class="footer-title">LIÊN LẠC</p>
+      <p><a href={`mailto:${site.email}`}>{site.email}</a></p>
+      <p><a href="/dang-ky/">Đăng ký để viết bài</a></p>
+      <p><a href="/rss.xml">Nguồn cấp RSS</a></p>
+    </div>
+  </div>
+  <div class="wrap fineprint">
+    © {new Date().getFullYear()} {site.name}. Ảnh quê hương lấy từ Wikimedia Commons, nguồn ghi dưới mỗi ảnh.
+  </div>
+</footer>

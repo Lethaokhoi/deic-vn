@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { site } from '../data/site';
+---
+
+<Layout title="Liên hệ" description={`Gửi bài và liên lạc với ${site.clubName} qua ${site.email}.`}>
+  <div class="wrap">
+    <header class="page-title">
+      <p class="kicker">Liên hệ</p>
+      <h1>Viết cho Ban liên lạc</h1>
+      <p class="deck">
+        Doanh nghiệp muốn đăng bài thì tạo tài khoản và viết trong trang của mình. Thư bên dưới dành cho việc hợp tác với câu lạc bộ hoặc gửi bài cho ban biên tập.
+      </p>
+    </header>
+    <section class="section">
+      <div class="contact-card">
+        <p>Địa chỉ thư của trang</p>
+        <p class="email"><a href={`mailto:${site.email}`}>{site.email}</a></p>
+        <p>
+          Hòm thư này hoạt động sau khi tên miền deic.vn được trỏ vào Cloudflare và bật chuyển tiếp thư. Thư sẽ về hộp thư cá nhân của người phụ trách, không cần thuê máy chủ email.
+        </p>
+        <p>Khi gửi bài, nên có tiêu đề, vài đoạn nội dung, và nguồn nếu bài nhắc số liệu hoặc lời của người khác.</p>
+      </div>
+    </section>
+  </div>
+</Layout>

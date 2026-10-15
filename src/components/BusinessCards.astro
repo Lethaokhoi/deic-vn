@@ -1,0 +1,32 @@
+---
+import { formatDate } from '../lib/posts';
+import { postImage } from '../lib/images';
+import type { BusinessPost } from '../lib/types';
+
+interface Props {
+  posts: BusinessPost[];
+}
+
+const { posts } = Astro.props;
+---
+
+<ul class="cards">
+  {
+    posts.map((post) => {
+      const src = postImage(post.imageKey, post.updatedAt);
+      return (
+        <li>
+          <a class="card" href={`/doanh-nghiep/${post.id}/`}>
+            {src && <img src={src} alt="" />}
+            <div>
+              <p class="meta">{post.businessName}</p>
+              <h3>{post.title}</h3>
+              <p>{post.description}</p>
+              <p class="meta">{formatDate(new Date(post.updatedAt))}</p>
+            </div>
+          </a>
+        </li>
+      );
+    })
+  }
+</ul>

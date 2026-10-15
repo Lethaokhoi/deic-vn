@@ -1,0 +1,66 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { createSession, sameOrigin, sessionSecret, verifyPassword } from '../lib/auth';
+import { findUserByEmail } from '../lib/db';
+
+export const prerender = false;
+
+let error = '';
+let email = '';
+
+if (Astro.locals.user) return Astro.redirect('/tai-khoan/');
+
+if (Astro.request.method === 'POST') {
+  if (!sameOrigin(Astro.request)) {
+    error = 'Yêu cầu không hợp lệ.';
+  } else {
+    const form = await Astro.request.formData();
+    email = String(form.get('email') ?? '').trim().toLowerCase();
+    const password = String(form.get('password') ?? '');
+    const env = Astro.locals.runtime?.env;
+    const secret = env ? sessionSecret(env) : null;
+
+    if (!env?.DB) error = 'Chưa kết nối được cơ sở dữ liệu.';
+    else if (!secret) error = 'Chưa cấu hình SESSION_SECRET trên Cloudflare.';
+    else if (!email || !password) error = 'Hãy điền email và mật khẩu.';
+    else {
+      const user = await findUserByEmail(env.DB, email);
+      if (!user || !(await verifyPassword(password, user.passwordHash))) {
+        error = 'Email hoặc mật khẩu chưa đúng.';
+      } else {
+        Astro.cookies.set('deic_session', await createSession(user.id, secret), {
+          httpOnly: true,
+          path: '/',
+          sameSite: 'lax',
+          secure: Astro.url.protocol === 'https:',
+          maxAge: 60 * 60 * 24 * 14,
+        });
+        return Astro.redirect('/tai-khoan/');
+      }
+    }
+  }
+}
+---
+
+<Layout title="Đăng nhập" description="Đăng nhập tài khoản doanh nghiệp trên DEIC.">
+  <div class="wrap">
+    <header class="page-title">
+      <p class="kicker">Tài khoản</p>
+      <h1>Đăng nhập</h1>
+      <p class="deck">Doanh nghiệp vào để viết một bài. Ban biên tập vào để viết các bài của câu lạc bộ.</p>
+    </header>
+    <form class="form" method="post" action="/dang-nhap/">
+      {error && <p class="alert">{error}</p>}
+      <label>
+        Email
+        <input name="email" type="email" required value={email} autocomplete="username" />
+      </label>
+      <label>
+        Mật khẩu
+        <input name="password" type="password" required autocomplete="current-password" />
+      </label>
+      <button class="btn" type="submit">Đăng nhập</button>
+      <p class="meta">Chưa có tài khoản? <a href="/dang-ky/">Đăng ký doanh nghiệp</a></p>
+    </form>
+  </div>
+</Layout>

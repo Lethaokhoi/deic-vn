@@ -1,0 +1,107 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Photo from '../components/Photo.astro';
+import BusinessCards from '../components/BusinessCards.astro';
+import { missions, site } from '../data/site';
+import { photos } from '../data/photos';
+import { formatDate } from '../lib/posts';
+import { listPosts } from '../lib/db';
+import { clubFeed } from '../lib/feed';
+
+const db = Astro.locals.runtime?.env?.DB;
+const cards = await clubFeed(db);
+const [featured, ...rest] = cards;
+const businesses = db ? await listPosts(db) : [];
+---
+
+<Layout>
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <p class="kicker">{site.place}</p>
+        <h1>Trang tin của người Đô Lương đang làm việc và làm ăn.</h1>
+        <p class="deck">
+          {site.clubName} ghi hoạt động câu lạc bộ tại đây. Mỗi doanh nghiệp thành viên có một tài khoản và một bài viết riêng.
+        </p>
+        <p class="actions">
+          <a class="btn" href="/bai-viet/">Đọc bài câu lạc bộ</a>
+          <a class="btn btn-line" href="/dang-ky/">Đăng ký để viết bài</a>
+        </p>
+      </div>
+      <Photo photo={photos.vinh} eager />
+    </section>
+
+    <section class="gallery" aria-label="Ảnh Nghệ An">
+      <Photo photo={photos.cuaLo} />
+      <Photo photo={photos.daiLo} />
+      <Photo photo={photos.truongThi} />
+    </section>
+
+    {
+      featured && (
+        <section class="section">
+          <div class="section-head">
+            <h2>Bài của câu lạc bộ</h2>
+            <a href="/bai-viet/">Xem tất cả</a>
+          </div>
+          <a class="featured" href={featured.href}>
+            {featured.image && <img src={featured.image} alt={featured.imageAlt ?? ''} />}
+            <div>
+              <p class="meta">{formatDate(featured.date)}</p>
+              <h2>{featured.title}</h2>
+              <p>{featured.description}</p>
+            </div>
+          </a>
+          <ul class="post-list">
+            {rest.map((post) => (
+              <li>
+                <a class="post-row" href={post.href}>
+                  {post.image && <img class="thumb" src={post.image} alt="" />}
+                  <span class="meta">{formatDate(post.date)}</span>
+                  <span>
+                    <h3>{post.title}</h3>
+                    <p>{post.description}</p>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Bài của doanh nghiệp</h2>
+        <a href="/doanh-nghiep/">Xem tất cả</a>
+      </div>
+      {
+        businesses.length > 0 ? (
+          <BusinessCards posts={businesses.slice(0, 3)} />
+        ) : (
+          <div class="empty">
+            <p>Chưa có bài doanh nghiệp. Mỗi tài khoản đăng được một bài, kèm ảnh.</p>
+            <a class="btn" href="/dang-ky/">Tạo tài khoản</a>
+          </div>
+        )
+      }
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>CLB làm gì</h2>
+        <a href="/gioi-thieu/">Giới thiệu</a>
+      </div>
+      <div class="missions">
+        {
+          missions.map((item) => (
+            <article class="mission">
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+            </article>
+          ))
+        }
+      </div>
+    </section>
+  </div>
+</Layout>

@@ -1,0 +1,63 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Photo from '../components/Photo.astro';
+import { missions, site } from '../data/site';
+import { photos } from '../data/photos';
+---
+
+<Layout
+  title="Giới thiệu"
+  description={`${site.clubName}: câu lạc bộ kết nối trí thức và doanh nhân người Đô Lương, Nghệ An.`}
+>
+  <div class="wrap">
+    <header class="page-title">
+      <p class="kicker">Giới thiệu</p>
+      <h1>{site.clubName}</h1>
+      <p class="deck">
+        Câu lạc bộ tập hợp trí thức và doanh nhân người Đô Lương, chủ yếu sinh hoạt tại Hà Nội, và giữ mối với quê Nghệ An cùng anh em doanh nhân trong Nam.
+      </p>
+    </header>
+
+    <Photo photo={photos.kinhTe} />
+
+    <section class="section prose">
+      <p>
+        Đầu xuân Giáp Thìn 2024, Ban Chủ nhiệm gặp mặt tại hội trường Huyện ủy Đô Lương để tổng kết năm 2023 và nói việc của năm 2024. Ông Chu Văn Tuấn, Chủ tịch CLB, phát biểu tại buổi này. Cùng dự có lãnh đạo huyện, Hội đồng hương Đô Lương tại Hà Nội, CLB Doanh nhân Đô Lương khu vực miền Nam và doanh nghiệp tại địa phương.
+      </p>
+      <p>
+        Trang deic.vn đăng bài của CLB và bài do từng doanh nghiệp tự viết. Mỗi tài khoản doanh nghiệp giữ một bài. Số liệu và phát biểu trong bài hoạt động của CLB bám nguồn công khai, có đường dẫn ở cuối bài.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>Hướng hoạt động</h2>
+      <div class="missions">
+        {
+          missions.map((item) => (
+            <article class="mission">
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+            </article>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="section prose">
+      <h2>Năm 2023, CLB đã làm những việc này</h2>
+      <ul>
+        <li>Tọa đàm, khảo sát với lãnh đạo huyện, xã, doanh nhân Đô Lương và chuyên gia tư vấn.</li>
+        <li>Chuyển giao kỹ thuật sản xuất than sinh học biochar tại trang trại Đồi Chồi.</li>
+        <li>Tham gia tặng nhà tình nghĩa và quà học sinh dịp khai giảng, tổng trị giá hơn 300 triệu đồng; tặng thêm sách, tivi, xe đạp cho một số trường.</li>
+        <li>Giao lưu thành viên hàng tháng, trực tiếp và trực tuyến.</li>
+      </ul>
+      <p>
+        Sang năm 2024, CLB nêu việc nâng uy tín và phát triển thành viên, kết nối kinh doanh, nâng năng lực doanh nghiệp thành viên, đóng góp cho quê và hội đồng hương. Ý tưởng quỹ đầu tư hoặc doanh nghiệp chung mới là hướng, chưa phải một quỹ đã vận hành.
+      </p>
+      <p class="source">
+        Nguồn: Ngọc Phương, Cổng thông tin điện tử huyện Đô Lương,
+        <a href="https://doluong.gov.vn/?p=203398">bài gặp mặt đầu xuân Giáp Thìn 2024</a>.
+      </p>
+    </section>
+  </div>
+</Layout>

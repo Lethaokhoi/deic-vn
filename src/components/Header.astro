@@ -1,0 +1,81 @@
+---
+import { nav, site } from '../data/site';
+
+const path = Astro.url.pathname;
+const user = Astro.locals.user;
+const who = user?.role === 'club' ? 'Ban biên tập' : user?.businessName;
+
+function current(href: string) {
+  if (href === '/') return path === '/' ? 'page' : undefined;
+  return path.startsWith(href) ? 'page' : undefined;
+}
+---
+
+<header class="site-header">
+  <div class="wrap masthead">
+    <a class="brand" href="/">
+      <span class="seal" aria-hidden="true">DEIC</span>
+      <span class="brand-copy">
+        <p class="brand-name">DEIC</p>
+        <p class="brand-sub">{site.clubName}</p>
+      </span>
+    </a>
+    <nav class="nav-desktop" aria-label="Chính">
+      {
+        nav.map((item) => (
+          <a href={item.href} aria-current={current(item.href)}>
+            {item.label}
+          </a>
+        ))
+      }
+      {
+        user ? (
+          <>
+            <a class="who" href="/tai-khoan/" aria-current={current('/tai-khoan/')}>
+              {who}
+            </a>
+            <form method="post" action="/dang-xuat/">
+              <button type="submit">Đăng xuất</button>
+            </form>
+          </>
+        ) : (
+          <>
+            <a href="/dang-nhap/" aria-current={current('/dang-nhap/')}>
+              Đăng nhập
+            </a>
+            <a class="btn btn-light" href="/dang-ky/">
+              Viết bài
+            </a>
+          </>
+        )
+      }
+    </nav>
+    <details class="nav-mobile">
+      <summary>Mục lục</summary>
+      <nav aria-label="Mục lục">
+        {
+          nav.map((item) => (
+            <a href={item.href} aria-current={current(item.href)}>
+              {item.label}
+            </a>
+          ))
+        }
+        {
+          user ? (
+            <>
+              <a href="/tai-khoan/">{who}</a>
+              <form method="post" action="/dang-xuat/">
+                <button type="submit">Đăng xuất</button>
+              </form>
+            </>
+          ) : (
+            <>
+              <a href="/dang-nhap/">Đăng nhập</a>
+              <a href="/dang-ky/">Đăng ký doanh nghiệp</a>
+            </>
+          )
+        }
+      </nav>
+    </details>
+  </div>
+</header>

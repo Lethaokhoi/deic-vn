@@ -1,0 +1,61 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getPost } from '../../../lib/db';
+import { postImage } from '../../../lib/images';
+import { formatDate } from '../../../lib/posts';
+import { paragraphs } from '../../../lib/text';
+import { site } from '../../../data/site';
+
+const { id } = Astro.params;
+const db = Astro.locals.runtime?.env?.DB;
+const found = db && id ? await getPost(db, id) : null;
+if (found?.role === 'business') return Astro.redirect(`/doanh-nghiep/${found.id}/`);
+const post = found?.role === 'club' ? found : null;
+if (!post) Astro.response.status = 404;
+const html = post ? paragraphs(post.body) : '';
+const image = post ? postImage(post.imageKey, post.updatedAt) : null;
+---
+
+<Layout title={post?.title ?? 'Không thấy bài'} description={post?.description ?? 'Bài câu lạc bộ này không có trên DEIC.'}>
+  {
+    post ? (
+      <article class="wrap article">
+        <script
+          type="application/ld+json"
+          set:html={JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BlogPosting',
+            headline: post.title,
+            dateModified: post.updatedAt,
+            description: post.description,
+            author: { '@type': 'Organization', name: site.clubName },
+            mainEntityOfPage: new URL(Astro.url.pathname, site.url).href,
+            inLanguage: 'vi',
+          })}
+        />
+        <header>
+          <p class="kicker">{site.clubName}</p>
+          <h1>{post.title}</h1>
+          <p class="deck">{post.description}</p>
+          <p class="meta">Cập nhật {formatDate(new Date(post.updatedAt))}</p>
+        </header>
+        {image && (
+          <figure class="frame">
+            <img src={image} alt={post.title} />
+          </figure>
+        )}
+        <div class="prose" set:html={html} />
+        <p class="source">
+          Bài do ban biên tập câu lạc bộ đăng. <a href="/bai-viet/">Xem các bài khác</a>
+        </p>
+      </article>
+    ) : (
+      <div class="wrap page-title">
+        <h1>Không thấy bài này</h1>
+        <p class="deck">
+          <a href="/bai-viet/">Về danh sách bài viết</a>
+        </p>
+      </div>
+    )
+  }
+</Layout>

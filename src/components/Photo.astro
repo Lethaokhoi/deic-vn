@@ -1,0 +1,15 @@
+---
+import { photos, type Photo } from '../data/photos';
+
+interface Props {
+  photo: Photo;
+  eager?: boolean;
+}
+
+const { photo, eager = false } = Astro.props;
+---
+
+<figure class="frame">
+  <img src={photo.src} alt={photo.alt} loading={eager ? 'eager' : 'lazy'} />
+  <figcaption>{photo.credit}</figcaption>
+</figure>

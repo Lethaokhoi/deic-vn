@@ -1,0 +1,85 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { formatDate, getPosts } from '../../lib/posts';
+import { render } from 'astro:content';
+import { site } from '../../data/site';
+
+const { slug } = Astro.params;
+const posts = await getPosts();
+const post = posts.find((item) => item.id === slug);
+if (!post) {
+  Astro.response.status = 404;
+}
+const rendered = post ? await render(post) : null;
+const Content = rendered?.Content;
+const others = posts.filter((item) => item.id !== post?.id).slice(0, 3);
+const canonical = new URL(Astro.url.pathname, site.url).href;
+---
+
+<Layout title={post?.data.title ?? 'Không thấy bài'} description={post?.data.description ?? 'Bài này không có trên DEIC.'}>
+  {
+    post && rendered ? (
+      <article class="wrap article">
+        <script
+          type="application/ld+json"
+          set:html={JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BlogPosting',
+            headline: post.data.title,
+            datePublished: post.data.pubDate.toISOString(),
+            description: post.data.description,
+            author: { '@type': 'Organization', name: post.data.author },
+            image: post.data.image ? new URL(post.data.image, site.url).href : undefined,
+            mainEntityOfPage: canonical,
+            inLanguage: 'vi',
+          })}
+        />
+        <header>
+          <p class="kicker">{post.data.tags.join(' · ') || 'Bài viết'}</p>
+          <h1>{post.data.title}</h1>
+          <p class="deck">{post.data.description}</p>
+          <p class="meta">
+            {formatDate(post.data.pubDate)} · {post.data.author}
+          </p>
+        </header>
+        {
+          post.data.image && (
+            <figure class="frame">
+              <img src={post.data.image} alt={post.data.imageAlt ?? ''} />
+              {post.data.imageCredit && <figcaption>{post.data.imageCredit}</figcaption>}
+            </figure>
+          )
+        }
+        <div class="prose">{Content && <Content />}</div>
+        {
+          post.data.source && (
+            <p class="source">
+              Nguồn: <a href={post.data.source}>{post.data.sourceLabel ?? post.data.source}</a>
+            </p>
+          )
+        }
+        {
+          others.length > 0 && (
+            <aside class="more">
+              <h2>Bài khác</h2>
+              <ul>
+                {others.map((item) => (
+                  <li>
+                    <a href={`/bai-viet/${item.id}/`}>{item.data.title}</a>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          )
+        }
+      </article>
+    ) : (
+      <div class="wrap page-title">
+        <h1>Không thấy bài này</h1>
+        <p class="deck">
+          <a href="/bai-viet/">Về danh sách bài viết</a>
+        </p>
+      </div>
+    )
+  }
+</Layout>

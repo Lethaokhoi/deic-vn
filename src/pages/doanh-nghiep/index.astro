@@ -1,0 +1,24 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import BusinessCards from '../../components/BusinessCards.astro';
+import { listPosts } from '../../lib/db';
+
+const db = Astro.locals.runtime?.env?.DB;
+const posts = db ? await listPosts(db) : [];
+---
+
+<Layout title="Doanh nghiệp" description="Bài viết do từng doanh nghiệp thành viên tự đăng trên DEIC. Mỗi tài khoản một bài.">
+  <div class="wrap">
+    <header class="page-title">
+      <p class="kicker">Doanh nghiệp</p>
+      <h1>Mỗi doanh nghiệp một bài</h1>
+      <p class="deck">
+        Đăng ký bằng email doanh nghiệp, rồi viết đúng một bài: việc đang làm, sản phẩm, hoặc một câu chuyện muốn hội viên khác đọc.
+      </p>
+      <p class="actions"><a class="btn" href="/dang-ky/">Đăng ký tài khoản</a></p>
+    </header>
+    <section class="section">
+      {posts.length > 0 ? <BusinessCards posts={posts} /> : <p class="empty">Chưa có bài. Bài đầu tiên sẽ hiện ở đây sau khi doanh nghiệp đăng.</p>}
+    </section>
+  </div>
+</Layout>

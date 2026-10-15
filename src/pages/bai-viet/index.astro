@@ -1,0 +1,56 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import BusinessCards from '../../components/BusinessCards.astro';
+import { formatDate } from '../../lib/posts';
+import { listPosts } from '../../lib/db';
+import { clubFeed } from '../../lib/feed';
+
+const db = Astro.locals.runtime?.env?.DB;
+const posts = await clubFeed(db);
+const businesses = db ? await listPosts(db) : [];
+---
+
+<Layout title="Bài viết" description="Bài của câu lạc bộ và bài từng doanh nghiệp thành viên tự đăng trên DEIC.">
+  <div class="wrap">
+    <header class="page-title">
+      <p class="kicker">Bài viết</p>
+      <h1>Nhật ký của câu lạc bộ và của từng doanh nghiệp</h1>
+      <p class="deck">Bài câu lạc bộ do ban biên tập đăng. Bài doanh nghiệp do chính doanh nghiệp viết, mỗi tài khoản một bài.</p>
+    </header>
+
+    <section class="section">
+      <h2>Câu lạc bộ</h2>
+      <ul class="post-list">
+        {
+          posts.map((post) => (
+            <li>
+              <a class="post-row" href={post.href}>
+                {post.image && <img class="thumb" src={post.image} alt="" />}
+                <span class="meta">{formatDate(post.date)}</span>
+                <span>
+                  {post.tags && post.tags.length > 0 && (
+                    <span class="tags">
+                      {post.tags.map((tag) => (
+                        <span class="tag">{tag}</span>
+                      ))}
+                    </span>
+                  )}
+                  <h3>{post.title}</h3>
+                  <p>{post.description}</p>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Doanh nghiệp</h2>
+        <a href="/dang-ky/">Đăng ký để viết</a>
+      </div>
+      {businesses.length > 0 ? <BusinessCards posts={businesses} /> : <p class="empty">Chưa có bài nào từ doanh nghiệp.</p>}
+    </section>
+  </div>
+</Layout>

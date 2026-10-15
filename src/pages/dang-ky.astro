@@ -1,0 +1,85 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { CLUB_EMAIL, createSession, hashPassword, sameOrigin, sessionSecret } from '../lib/auth';
+import { createUser } from '../lib/db';
+
+export const prerender = false;
+
+let error = '';
+let businessName = '';
+let email = '';
+
+if (Astro.locals.user) return Astro.redirect('/tai-khoan/');
+
+if (Astro.request.method === 'POST') {
+  if (!sameOrigin(Astro.request)) {
+    error = 'Yêu cầu không hợp lệ.';
+  } else {
+    const form = await Astro.request.formData();
+    if (String(form.get('website') ?? '').trim()) return Astro.redirect('/dang-nhap/');
+    businessName = String(form.get('business_name') ?? '').trim().replace(/\s+/g, ' ');
+    email = String(form.get('email') ?? '').trim().toLowerCase();
+    const password = String(form.get('password') ?? '');
+    const env = Astro.locals.runtime?.env;
+    const secret = env ? sessionSecret(env) : null;
+
+    if (!env?.DB) error = 'Chưa kết nối được cơ sở dữ liệu.';
+    else if (!secret) error = 'Chưa cấu hình SESSION_SECRET trên Cloudflare.';
+    else if (businessName.length < 2 || businessName.length > 80) error = 'Tên doanh nghiệp cần từ 2 đến 80 ký tự.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) error = 'Email chưa đúng định dạng.';
+    else if (email === CLUB_EMAIL) error = 'Email này dành cho ban biên tập câu lạc bộ.';
+    else if (password.length < 8 || password.length > 72) error = 'Mật khẩu cần từ 8 đến 72 ký tự.';
+    else {
+      try {
+        const user = await createUser(env.DB, {
+          email,
+          businessName,
+          passwordHash: await hashPassword(password),
+        });
+        Astro.cookies.set('deic_session', await createSession(user.id, secret), {
+          httpOnly: true,
+          path: '/',
+          sameSite: 'lax',
+          secure: Astro.url.protocol === 'https:',
+          maxAge: 60 * 60 * 24 * 14,
+        });
+        return Astro.redirect('/tai-khoan/');
+      } catch (caught) {
+        error = String(caught).includes('UNIQUE')
+          ? 'Email này đã có tài khoản. Hãy đăng nhập.'
+          : 'Không tạo được tài khoản. Thử lại sau.';
+      }
+    }
+  }
+}
+---
+
+<Layout title="Đăng ký" description="Tạo tài khoản doanh nghiệp để viết một bài trên DEIC.">
+  <div class="wrap">
+    <header class="page-title">
+      <p class="kicker">Tài khoản</p>
+      <h1>Đăng ký doanh nghiệp</h1>
+      <p class="deck">Mỗi doanh nghiệp một tài khoản và một bài viết. Sửa bài thì vào lại trang này sau khi đăng nhập.</p>
+    </header>
+    <form class="form" method="post" action="/dang-ky/">
+      {error && <p class="alert">{error}</p>}
+      <label>
+        Tên doanh nghiệp
+        <input name="business_name" required maxlength="80" value={businessName} autocomplete="organization" />
+      </label>
+      <label>
+        Email
+        <input name="email" type="email" required maxlength="120" value={email} autocomplete="username" />
+      </label>
+      <label>
+        Mật khẩu
+        <input name="password" type="password" required minlength="8" maxlength="72" autocomplete="new-password" />
+      </label>
+      <p class="hp">
+        <label>Website <input name="website" tabindex="-1" autocomplete="off" /></label>
+      </p>
+      <button class="btn" type="submit">Tạo tài khoản</button>
+      <p class="meta">Đã có tài khoản? <a href="/dang-nhap/">Đăng nhập</a></p>
+    </form>
+  </div>
+</Layout>
