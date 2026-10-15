@@ -132,35 +132,11 @@ main,
   text-decoration: none;
 }
 
-.brand-copy {
-  width: 13.5rem;
-  min-width: 0;
-}
-
 .seal {
-  width: 4.4rem;
-  height: 4.4rem;
+  width: 4.6rem;
+  height: 4.6rem;
   flex: none;
   display: block;
-}
-
-.brand-name {
-  margin: 0;
-  font-size: 1.7rem;
-  line-height: 1;
-  letter-spacing: 0.14em;
-  font-weight: 700;
-}
-
-.brand-sub {
-  margin: 0.3rem 0 0;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 0.82rem;
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
 }
 
 .nav-desktop {
@@ -1046,10 +1022,6 @@ h3 {
 
   .masthead {
     align-items: flex-start;
-  }
-
-  .brand-sub {
-    display: none;
   }
 
   .thumb,

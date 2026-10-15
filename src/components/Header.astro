@@ -1,5 +1,5 @@
 ---
-import { nav, site } from '../data/site';
+import { nav } from '../data/site';
 
 const path = Astro.url.pathname;
 const user = Astro.locals.user;
@@ -13,12 +13,8 @@ function current(href: string) {
 
 <header class="site-header">
   <div class="wrap masthead">
-    <a class="brand" href="/">
+    <a class="brand" href="/" aria-label="DEIC">
       <img class="seal" src="/logo.png" alt="" width="256" height="256" />
-      <span class="brand-copy">
-        <p class="brand-name">DEIC</p>
-        <p class="brand-sub">{site.clubName}</p>
-      </span>
     </a>
     <nav class="nav-desktop" aria-label="Chính">
       {
